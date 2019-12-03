@@ -190,8 +190,10 @@ if __name__ == "__main__":
   #   outp.close()
 
   filename = 'vae_1'
-  # AI_1 = VAE_AI(1, filename)
-  AI_1 = AI(1)
+  #filename = 'seq2seq'
+  AI_1 = VAE_AI(1, filename)
+  #AI_1 = AI(1)
+  #AI_1 = Seq2Seq_AI(1, filename)
   AI_2 = AI(2)
   boards, movess = simulate_2player_games(500, AI_1, AI_2, draw=False)
 
