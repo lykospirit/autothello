@@ -30,7 +30,7 @@ class Seq2Seq:
         #decoder has 66 tokens where token 64 is end of game and 65 is SOS
         self.num_decoder_tokens = 66
         self.max_encoder_seq_length = 60
-        self.max_decoder_seq_length = 1
+        self.max_decoder_seq_length = 60
 
     def create_network(self):
         kernel_init = RandomNormal(mean=0.0, stddev=1.0)
@@ -54,8 +54,8 @@ class Seq2Seq:
 
     def load_data(self):
         if not os.path.isfile("train_X_seq2seq"):
-            num_train = 40000
-            num_valid = 100
+            num_train = 100
+            num_valid = 20
             num_test = 40000+5000+8207-num_train-num_valid 
             self.data = dict()
             train_X = np.zeros((num_train*60, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
@@ -64,38 +64,49 @@ class Seq2Seq:
             train_Y = np.zeros((num_train*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
             valid_Y = np.zeros((num_valid*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
             test_Y = np.zeros((num_test*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
-            train_decoder_in = np.zeros((num_train*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
-            valid_decoder_in = np.zeros((num_valid*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
-            test_decoder_in = np.zeros((num_test*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            train_decoder_in = np.ones((num_train*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            valid_decoder_in = np.ones((num_valid*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            test_decoder_in = np.ones((num_test*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
             with open("othello_database/player1.txt", "rb") as f:
                 for i,line in enumerate(f): # player1.txt has 53207 lines
                     indices = [float(i.decode('UTF-8')) for i in line.strip().split()]
-                    for t, index in enumerate(indices):
-                        if (i<num_train):
-                            for n in range(t,60):
-                                train_X[60*i+n, t, int(index*64)-1] = 1
-                                train_decoder_in[60*i+n, 0, 65] = 1
-                            if(t+1<60):
-                                train_Y[60*i+t, 0, int(indices[t+1]*64)-1] = 1
+                    for t in range(0,len(indices)-1):
+                        encoder_in = indices[0:t+1]
+                        decoder_in = indices[t+1:]
+                        for encod_t in range(len(encoder_in)):
+                            index = encoder_in[encod_t]
+                            if (i<num_train):
+                                train_X[60*i+t, encod_t, int(index*64)-1] = 1
+                            elif (i<num_train+num_valid):
+                                for n in range(60-t):
+                                    valid_X[60*(i-num_train)+t, encod_t, int(index*64)-1] = 1
                             else:
-                                train_Y[60*i+t, 0, 64] = 1
-                        elif (i<num_train+num_valid):
-                            for n in range(60-t):
-                                valid_X[60*(i-num_train)+n, t, int(index*64)-1] = 1
-                                valid_decoder_in[60*(i-num_train)+n, 0, 65] = 1
-                            if(t+1<60):
-                                valid_Y[60*(i-num_train)+t, 0, int(indices[t+1]*64)-1] = 1
+                                break
+                                for n in range(60-t):
+                                    test_X[60*(i-num_train-num_valid)+t, encod_t, int(index*64)-1] = 1
+                        for decod_t in range(len(decoder_in)):
+                            index = decoder_in[decod_t]
+                            lag = int(decoder_in[decod_t-1]*64)-1 if (decod_t>0) else 65
+                            if (i<num_train):
+                                if(decod_t + 1 < len(decoder_in)):
+                                    train_Y[60*i+t, decod_t, int(index*64)-1] = 1
+                                    train_decoder_in[60*i+t, decod_t+1, lag] = 1
+                                else:
+                                    train_Y[60*i+t, 0, 64] = 1
+                            elif (i<num_train+num_valid):
+                                if(decod_t + 1 < len(decoder_in)):
+                                    valid_Y[60*(i-num_train)+t, decod_t, int(index*64)-1] = 1
+                                    valid_decoder_in[60*(i-num_train)+t, decod_t+1, lag] = 1
+                                else:
+                                    valid_Y[60*(i-num_train)+t, decod_t, 64] = 1
                             else:
-                                valid_Y[60*(i-num_train)+t, 0, 64] = 1
-                        else:
-                            break
-                            for n in range(60-t):
-                                test_X[60*(i-num_train-num_valid)+n, t, int(index*64)-1] = 1
-                                test_decoder_in[60*(i-num_train-num_valid)+n, 0, 65] = 1
-                            if(t+1<60):
-                                test_Y[60*(i-num_train-num_valid)+t, 0, int(indices[t+1]*64)-1] = 1
-                            else:
-                                test_Y[60*(i-num_train-num_valid)+t, 0, 64] = 1
+                                break
+                                if(decod_t + 1 < len(decoder_in)):
+                                    test_Y[60*(i-num_train-num_valid)+t, decod_t, int(index*64)-1] = 1
+                                    test_decoder_in[60*(i-num_train-num_valid)+t, decod_t+1, lag] = 1
+                                else:
+                                    test_Y[60*(i-num_train-num_valid)+t, decod_t, 64] = 1
+
             # np.save("train_X_seq2seq", train_X, allow_pickle=True)
             # np.save("test_X_seq2seq", test_X, allow_pickle=True)
             # np.save("valid_X_seq2seq", valid_X, allow_pickle=True)
@@ -128,25 +139,14 @@ class Seq2Seq:
         train_Y = self.data["train_Y"]
         valid_Y = self.data["valid_Y"]
 
-        train_loss = []
-        valid_loss = []
+        history = self.model.fit([train_X, train_decoder_in], train_Y, epochs=self.epochs, verbose=1, batch_size=self.batch_size, validation_data=([valid_X, valid_decoder_in], valid_Y))
+
         trainLosses_filename = "results/{}_trainLosses.txt".format(filename)
         validLosses_filename = "results/{}_validLosses.txt".format(filename)
-        for i in range(self.epochs):
-            row_pick = np.random.randint(0, train_X.shape[0], 8000)
-            encode_input = train_X[row_pick,:,:]
-            decode_input = train_decoder_in[row_pick,:,:]
-            decode_output = train_Y[row_pick,:,:]
-            history = self.model.fit([encode_input, decode_input], decode_output, 
-                epochs=1, verbose=1, batch_size=self.batch_size, validation_data=([valid_X, valid_decoder_in], valid_Y))
-            train_loss += history.history['loss']
-            valid_loss += history.history['val_loss']
-            if i %10 == 0:
-                self.model.save_weights("models/{}.h5".format(filename))
-                np.savetxt(trainLosses_filename, train_loss, delimiter=',')
-                np.savetxt(validLosses_filename, valid_loss, delimiter=',')
+        np.savetxt(trainLosses_filename, history.history['loss'], delimiter=',')
+        np.savetxt(validLosses_filename, history.history['val_loss'], delimiter=',')
 
-       
+        self.model.save_weights("models/{}.h5".format(filename))
 
 
 
@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
     # # Setting this as the default tensorflow session.
     # K.tensorflow_backend.set_session(sess)
-    kwargs = {'lr': 1e-5, 'batch_size': 16, 'epochs': 100} 
+    kwargs = {'lr': 1e-5, 'batch_size': 16, 'epochs': 5} 
     model = Seq2Seq(**kwargs)
     model.create_network()
     model.load_data()

@@ -60,48 +60,49 @@ class Seq2Seq:
 
     def load_data(self):
         if not os.path.isfile("train_X_seq2seq"):
-            num_train = 100
-            num_valid = 50
+            num_train = 3500
+            num_valid = 200
             num_test = 40000+5000+8207-num_train-num_valid 
             self.data = dict()
-            train_X = np.zeros((num_train*64, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
-            valid_X = np.zeros((num_valid*64, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
-            test_X = np.zeros((num_test*64, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
-            train_Y = np.zeros((num_train*64, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
-            valid_Y = np.zeros((num_valid*64, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
-            test_Y = np.zeros((num_test*64, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
-            train_decoder_in = np.zeros((num_train*64, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
-            valid_decoder_in = np.zeros((num_valid*64, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
-            test_decoder_in = np.zeros((num_test*64, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            train_X = np.zeros((num_train*60, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
+            valid_X = np.zeros((num_valid*60, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
+            test_X = np.zeros((num_test*60, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
+            train_Y = np.zeros((num_train*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            valid_Y = np.zeros((num_valid*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            test_Y = np.zeros((num_test*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            train_decoder_in = np.zeros((num_train*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            valid_decoder_in = np.zeros((num_valid*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            test_decoder_in = np.zeros((num_test*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
+            test_decoder_in = np.zeros((num_test*60, self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
             with open("othello_database/player1.txt", "rb") as f:
                 for i,line in enumerate(f): # player1.txt has 53207 lines
                     indices = [float(i.decode('UTF-8')) for i in line.strip().split()]
                     for t, index in enumerate(indices):
                         if (i<num_train):
-                            for n in range(64-t):
-                                train_X[i+n, t, int(index*64)-1] = 1
-                                train_decoder_in[i+n, 0, 65] = 1
+                            for n in range(t,60):
+                                train_X[60*i+n, t, int(index*64)-1] = 1
+                                train_decoder_in[60*i+n, 0, 65] = 1
                             if(t+1<60):
-                                train_Y[i+t, 0, int(indices[t+1]*64)-1] = 1
+                                train_Y[60*i+t, 0, int(indices[t+1]*64)-1] = 1
                             else:
-                                train_Y[i+t, 0, 64] = 1
+                                train_Y[60*i+t, 0, 64] = 1
                         elif (i<num_train+num_valid):
-                            for n in range(64-t):
-                                valid_X[i+n-num_train, t, int(index*64)-1] = 1
-                                valid_decoder_in[i+n-num_train, 0, 65] = 1
+                            for n in range(60-t):
+                                valid_X[60*(i-num_train)+n, t, int(index*64)-1] = 1
+                                valid_decoder_in[60*(i-num_train)+n, 0, 65] = 1
                             if(t+1<60):
-                                valid_Y[i+t-num_train, 0, int(indices[t+1]*64)-1] = 1
+                                valid_Y[60*(i-num_train)+t, 0, int(indices[t+1]*64)-1] = 1
                             else:
-                                valid_Y[i+t-num_train, 0, 64] = 1
+                                valid_Y[60*(i-num_train)+t, 0, 64] = 1
                         else:
                             break
-                            for n in range(64-t):
-                                test_X[i+n-(num_train+num_valid), t, int(index*64)-1] = 1
-                                test_decoder_in[i+n-(num_train+num_valid), 0, 65] = 1
+                            for n in range(60-t):
+                                test_X[60*(i-num_train-num_valid)+n, t, int(index*64)-1] = 1
+                                test_decoder_in[60*(i-num_train-num_valid)+n, 0, 65] = 1
                             if(t+1<60):
-                                test_Y[i+t-(num_train+num_valid), 0, int(indices[t+1]*64)-1] = 1
+                                test_Y[60*(i-num_train-num_valid)+t, 0, int(indices[t+1]*64)-1] = 1
                             else:
-                                test_Y[i+t-(num_train+num_valid), 0, 64] = 1
+                                test_Y[60*(i-num_train-num_valid)+t, 0, 64] = 1
             # np.save("train_X_seq2seq", train_X, allow_pickle=True)
             # np.save("test_X_seq2seq", test_X, allow_pickle=True)
             # np.save("valid_X_seq2seq", valid_X, allow_pickle=True)
@@ -146,7 +147,7 @@ class Seq2Seq:
 
 
 if __name__ == "__main__":
-    kwargs = {'lr': 1e-5, 'batch_size': 16, 'epochs': 5} 
+    kwargs = {'lr': 1e-5, 'batch_size': 16, 'epochs': 50} 
     model = Seq2Seq(**kwargs)
     model.create_network()
     model.load_data()
