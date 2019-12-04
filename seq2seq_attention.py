@@ -1,9 +1,11 @@
 from keras.models import Model
-from keras.layers import Input, Dense, LSTM
+from keras.layers import Input, Dense, LSTM, Concatenate, Flatten, Reshape
+from keras.initializers import RandomNormal, RandomUniform
 import keras.backend as K
 import numpy as np 
 import os.path
-
+import tensorflow as tf
+import theano
 
 
 def get_seq2seq_model_input(indices):
@@ -28,27 +30,39 @@ class Seq2Seq:
         self.max_decoder_seq_length = 1
 
     def create_network(self):
+        kernel_init = RandomNormal(mean=0.0, stddev=1.0)
+        bias_init = RandomNormal(mean=0.0, stddev=1.0)
+
         encoder_inputs = Input((None, self.num_encoder_tokens))
-        encoder = LSTM(self.latent, return_state = True)
+        encoder = LSTM(self.latent, kernel_initializer=kernel_init, bias_initializer=bias_init, return_state = True)
         encoder_outputs, state_h, state_c = encoder(encoder_inputs)
         encoder_states = [state_h, state_c]
 
-        decoder_inputs = Input(shape=(None, self.num_decoder_tokens))
-        decoder_LSTM = LSTM(self.latent, return_sequences=True, return_state=True)
-        decoder_outputs, _, _ = decoder_LSTM(decoder_inputs, initial_state=encoder_states)
-        decoder_dense = Dense(self.num_decoder_tokens, activation='softmax')
-        decoder_outputs = decoder_dense(decoder_outputs)
+        context_vector_layer = Dense(1, kernel_initializer=kernel_init, use_bias=False)
+        context_vector = context_vector_layer(state_h)
+        context_vector = Reshape((-1,1))(context_vector)
+        #context_vector = Flatten()(context_vector)
 
-        self.model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
+        decoder_inputs = Input(shape=(None, self.num_decoder_tokens))
+        decoder_LSTM = LSTM(self.latent, kernel_initializer=kernel_init, bias_initializer=bias_init, return_sequences=True, return_state=True)
+        decoder_outputs, _, _ = decoder_LSTM(decoder_inputs, initial_state=encoder_states)
+        decoder_outputs = Reshape((-1,1,64))(decoder_outputs.flatten())
+        decoder_dense = Dense(self.num_decoder_tokens, activation='softmax', input_dim=65)
+        decoder_dense_in = Concatenate(axis=-1)([decoder_outputs.flatten(), context_vector.flatten()])
+        decoder_dense_in = Reshape((65,-1))(decoder_dense_in)
+        output = decoder_dense(decoder_dense_in)
+
+
+        self.model = Model([encoder_inputs, decoder_inputs], output)
         self.model.compile(optimizer='rmsprop', loss='categorical_crossentropy',
               metrics=['accuracy'])
 
 
     def load_data(self):
         if not os.path.isfile("train_X_seq2seq"):
-            num_train = 10000
-            num_valid = 5000
-            num_test = 40000+5000+8207-10000-5000 
+            num_train = 100
+            num_valid = 50
+            num_test = 40000+5000+8207-num_train-num_valid 
             self.data = dict()
             train_X = np.zeros((num_train*64, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
             valid_X = np.zeros((num_valid*64, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
@@ -73,20 +87,21 @@ class Seq2Seq:
                                 train_Y[i+t, 0, 64] = 1
                         elif (i<num_train+num_valid):
                             for n in range(64-t):
-                                valid_X[i+n-40000, t, int(index*64)-1] = 1
-                                valid_decoder_in[i+n-40000, 0, 65] = 1
+                                valid_X[i+n-num_train, t, int(index*64)-1] = 1
+                                valid_decoder_in[i+n-num_train, 0, 65] = 1
                             if(t+1<60):
-                                valid_Y[i+t-40000, 0, int(indices[t+1]*64)-1] = 1
+                                valid_Y[i+t-num_train, 0, int(indices[t+1]*64)-1] = 1
                             else:
-                                valid_Y[i+t-40000, 0, 64] = 1
+                                valid_Y[i+t-num_train, 0, 64] = 1
                         else:
+                            break
                             for n in range(64-t):
-                                test_X[i+n-45000, t, int(index*64)-1] = 1
-                                test_decoder_in[i+n-45000, 0, 65] = 1
+                                test_X[i+n-(num_train+num_valid), t, int(index*64)-1] = 1
+                                test_decoder_in[i+n-(num_train+num_valid), 0, 65] = 1
                             if(t+1<60):
-                                test_Y[i+t-45000, 0, int(indices[t+1]*64)-1] = 1
+                                test_Y[i+t-(num_train+num_valid), 0, int(indices[t+1]*64)-1] = 1
                             else:
-                                test_Y[i, 0, 64] = 1
+                                test_Y[i+t-(num_train+num_valid), 0, 64] = 1
             # np.save("train_X_seq2seq", train_X, allow_pickle=True)
             # np.save("test_X_seq2seq", test_X, allow_pickle=True)
             # np.save("valid_X_seq2seq", valid_X, allow_pickle=True)

@@ -189,13 +189,15 @@ if __name__ == "__main__":
   #       outp.write('\n'.encode('UTF-8'))
   #   outp.close()
 
-  filename = 'vae_1'
-  #filename = 'seq2seq'
-  AI_1 = VAE_AI(1, filename)
+  # filename1 = 'vae_1'
+  filename1 = 'seq2seq2'
+  # filename2 = 'seq2seq'
+  # AI_1 = VAE_AI(1, filename1)
+  AI_1 = Seq2Seq_AI(1, filename1)
   #AI_1 = AI(1)
-  #AI_1 = Seq2Seq_AI(1, filename)
+  # AI_2 = Seq2Seq_AI(2, filename2)
   AI_2 = AI(2)
-  boards, movess = simulate_2player_games(500, AI_1, AI_2, draw=False)
+  boards, movess = simulate_2player_games(5000, AI_1, AI_2, draw=False)
 
   wins, losses, draws = 0, 0, 0
   for board in boards:
@@ -203,5 +205,5 @@ if __name__ == "__main__":
     if state[1] > state[2]: wins += 1
     elif state[1] < state[2]: losses += 1
     else: draws += 1
-  print("Results for model {}".format(filename))
+  print("Results for model {}".format(filename1))
   print("Player 1 - Wins: {}, Losses: {}, Draws: {}".format(wins, losses, draws))

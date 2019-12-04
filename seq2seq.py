@@ -1,17 +1,22 @@
 from keras.models import Model
 from keras.layers import Input, Dense, LSTM
 import keras.backend as K
+from keras.initializers import RandomNormal, RandomUniform
 import numpy as np 
 import os.path
-
+import tensorflow as tf
 
 
 def get_seq2seq_model_input(indices):
-    encoder_in = np.zeros((self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
-    decoder_in = np.zeros((self.max_decoder_seq_length, self.num_decoder_tokens), dtype='float32')
-    decoder_in[0, 65]=1
+    num_encoder_tokens = 64
+    num_decoder_tokens = 66
+    max_encoder_seq_length = 60
+    max_decoder_seq_length = 1
+    encoder_in = np.zeros((1, max_encoder_seq_length, num_encoder_tokens), dtype='float32')
+    decoder_in = np.zeros((1, max_decoder_seq_length, num_decoder_tokens), dtype='float32')
+    decoder_in[0, 0, 65]=1
     for t, index in enumerate(indices):
-        encoder_in[t, int(index*64)] = 1
+        encoder_in[0, t, int(index*64)-1] = 1
     return encoder_in, decoder_in
 
 class Seq2Seq:
@@ -28,6 +33,9 @@ class Seq2Seq:
         self.max_decoder_seq_length = 1
 
     def create_network(self):
+        kernel_init = RandomNormal(mean=0.0, stddev=1.0)
+        bias_init = RandomNormal(mean=0.0, stddev=1.0)
+
         encoder_inputs = Input((None, self.num_encoder_tokens))
         encoder = LSTM(self.latent, return_state = True)
         encoder_outputs, state_h, state_c = encoder(encoder_inputs)
@@ -40,15 +48,16 @@ class Seq2Seq:
         decoder_outputs = decoder_dense(decoder_outputs)
 
         self.model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
+        self.model.summary()
         self.model.compile(optimizer='rmsprop', loss='categorical_crossentropy',
               metrics=['accuracy'])
 
 
     def load_data(self):
         if not os.path.isfile("train_X_seq2seq"):
-            num_train = 10000
-            num_valid = 5000
-            num_test = 40000+5000+8207-10000-5000 
+            num_train = 3500
+            num_valid = 200
+            num_test = 40000+5000+8207-num_train-num_valid 
             self.data = dict()
             train_X = np.zeros((num_train*64, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
             valid_X = np.zeros((num_valid*64, self.max_encoder_seq_length, self.num_encoder_tokens), dtype='float32')
@@ -73,20 +82,21 @@ class Seq2Seq:
                                 train_Y[i+t, 0, 64] = 1
                         elif (i<num_train+num_valid):
                             for n in range(64-t):
-                                valid_X[i+n-40000, t, int(index*64)-1] = 1
-                                valid_decoder_in[i+n-40000, 0, 65] = 1
+                                valid_X[i+n-num_train, t, int(index*64)-1] = 1
+                                valid_decoder_in[i+n-num_train, 0, 65] = 1
                             if(t+1<60):
-                                valid_Y[i+t-40000, 0, int(indices[t+1]*64)-1] = 1
+                                valid_Y[i+t-num_train, 0, int(indices[t+1]*64)-1] = 1
                             else:
-                                valid_Y[i+t-40000, 0, 64] = 1
+                                valid_Y[i+t-num_train, 0, 64] = 1
                         else:
+                            break
                             for n in range(64-t):
-                                test_X[i+n-45000, t, int(index*64)-1] = 1
-                                test_decoder_in[i+n-45000, 0, 65] = 1
+                                test_X[i+n-(num_train+num_valid), t, int(index*64)-1] = 1
+                                test_decoder_in[i+n-(num_train+num_valid), 0, 65] = 1
                             if(t+1<60):
-                                test_Y[i+t-45000, 0, int(indices[t+1]*64)-1] = 1
+                                test_Y[i+t-(num_train+num_valid), 0, int(indices[t+1]*64)-1] = 1
                             else:
-                                test_Y[i, 0, 64] = 1
+                                test_Y[i+t-(num_train+num_valid), 0, 64] = 1
             # np.save("train_X_seq2seq", train_X, allow_pickle=True)
             # np.save("test_X_seq2seq", test_X, allow_pickle=True)
             # np.save("valid_X_seq2seq", valid_X, allow_pickle=True)
@@ -131,9 +141,15 @@ class Seq2Seq:
 
 
 if __name__ == "__main__":
-    kwargs = {'lr': 1e-5, 'batch_size': 16, 'epochs': 5} 
+    # gpu_ops = tf.GPUOptions(allow_growth=True)
+    # config = tf.ConfigProto(gpu_options=gpu_ops)
+    # sess = tf.Session(config=config)
+
+    # # Setting this as the default tensorflow session.
+    # K.tensorflow_backend.set_session(sess)
+    kwargs = {'lr': 1e-5, 'batch_size': 16, 'epochs': 50} 
     model = Seq2Seq(**kwargs)
     model.create_network()
     model.load_data()
-    model.train("seq2seq")
+    model.train("seq2seq3")
     #print(model.data["train_X"])

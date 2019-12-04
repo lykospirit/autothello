@@ -9,6 +9,7 @@ from keras.initializers import RandomNormal, RandomUniform
 from keras.optimizers import Adam
 from keras.losses import mean_squared_error#, kullback_leibler_divergence
 import numpy as np
+from seq2seq import get_seq2seq_model_input
 
 class AI:
   def __init__(self, player):
@@ -40,7 +41,6 @@ class VAE_AI(AI):
     # compute similarity to coords so far
     dists = []
     indices = coords_to_indices(coords)
-    print(indices)
     valid_coords = get_valid_coords(board, self.player)
     assert(len(valid_coords) > 0)
     for i in range(sample_size):
@@ -106,12 +106,6 @@ class Seq2Seq_AI(AI):
     print("Seq2Seq_AI initialized with weights {}".format(filename))
 
   def move(self, board, coords):
-    # run forward pass on 2500 random samples
-    sample_size, vote_size = 2500, 250
-    samples = np.random.normal(0.0, 1.0, (sample_size,64))
-    decodes = self.model.predict(samples)
-    assert(decodes.shape == (sample_size,60))
-
     # compute similarity to coords so far
     dists = []
     indices = coords_to_indices(coords)
@@ -122,7 +116,7 @@ class Seq2Seq_AI(AI):
     encoder_in, decoder_in = get_seq2seq_model_input(indices)
 
     #input the encoder sequence (moves so far)
-    pred_softmax = self.model.predict([encoder_in,decoder_int])
+    pred_softmax = self.model.predict([encoder_in,decoder_in]).flatten()
     max_pred = np.argmax(pred_softmax)
     next_move = (max_pred//8, max_pred%8)
     while(next_move not in valid_coords):
