@@ -4,11 +4,12 @@ from keras.models import load_model
 import keras.backend as K
 import sys
 from keras.models import Model
-from keras.layers import Dense, Input, Lambda
+from keras.layers import Dense, Input, Lambda, LSTM
 from keras.initializers import RandomNormal, RandomUniform
 from keras.optimizers import Adam
 from keras.losses import mean_squared_error#, kullback_leibler_divergence
 import numpy as np
+from seq2seq import get_seq2seq_model_input
 
 class AI:
   def __init__(self, player):
@@ -86,6 +87,69 @@ class DQN_AI(AI):
       q_values = self.model.predict(np.array([board.flatten()]))[0]
       opt_id = ids[np.argmax(q_values[ids])]
       return (opt_id//8, opt_id%8)
+
+class Seq2Seq_AI(AI):
+  def __init__(self, player, filename):
+    super().__init__(player)
+    self.latent = 64
+    self.num_encoder_tokens = 64
+    #decoder has 66 tokens where token 64 is end of game and 65 is SOS
+    self.num_decoder_tokens = 66
+    self.max_encoder_seq_length = 60
+    self.max_decoder_seq_length = 1
+
+    # load model weights
+    encoder_inputs = Input((None, self.num_encoder_tokens))
+    encoder = LSTM(self.latent, return_state = True)
+    encoder_outputs, state_h, state_c = encoder(encoder_inputs)
+    encoder_states = [state_h, state_c]
+
+    decoder_inputs = Input(shape=(None, self.num_decoder_tokens))
+    decoder_LSTM = LSTM(self.latent, return_sequences=True, return_state=True)
+    decoder_outputs, _, _ = decoder_LSTM(decoder_inputs, initial_state=encoder_states)
+    decoder_dense = Dense(self.num_decoder_tokens, activation='softmax')
+    decoder_outputs = decoder_dense(decoder_outputs)
+
+
+    # encoder_model = Model(encoder_inputs, encoder_states)
+
+    # decoder_state_input_h = Input(shape=(self.latent,))
+    # decoder_state_input_c = Input(shape=(self.latent,))
+    # decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
+    # decoder_outputs, state_h, state_c = decoder_lstm(
+    #     decoder_inputs, initial_state=decoder_states_inputs)
+    # decoder_states = [state_h, state_c]
+    # decoder_outputs = decoder_dense(decoder_outputs)
+    # decoder_model = Model(
+    #     [decoder_inputs] + decoder_states_inputs,
+    #     [decoder_outputs] + decoder_states)
+
+    self.model = Model([encoder_inputs, decoder_inputs], decoder_outputs)
+    self.model.load_weights('models/{}.h5'.format(filename), by_name=True)
+    print("Seq2Seq_AI initialized with weights {}".format(filename))
+
+  def move(self, board, coords):
+    # compute similarity to coords so far
+    dists = []
+    indices = coords_to_indices(coords)
+    valid_coords = get_valid_coords(board, self.player)
+    assert(len(valid_coords) > 0)
+
+    #get the one hot encoder in and decoder in 
+    encoder_in, decoder_in = get_seq2seq_model_input(indices)
+
+    #input the encoder sequence (moves so far)
+    pred_softmax = self.model.predict([encoder_in,decoder_in]).flatten()
+    max_pred = np.argmax(pred_softmax)
+    next_move = (max_pred//8, max_pred%8)
+    while(next_move not in valid_coords):
+      pred_softmax[max_pred] = -1
+      max_pred = np.argmax(pred_softmax)
+      next_move = (max_pred//8, max_pred%8)
+
+    # failsafe: return random valid coord
+    return next_move
+
 
 if __name__ == "__main__":
   pass

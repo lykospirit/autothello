@@ -194,8 +194,15 @@ if __name__ == "__main__":
   AI_1 = DQN_AI(1, filename)
   # AI_1 = VAE_AI(1, filename)
   # AI_1 = AI(1)
+  # filename1 = 'vae_1'
+  # filename1 = 'seq2seq5'
+  # filename2 = 'seq2seq4'
+  # AI_1 = VAE_AI(1, filename1)
+  # AI_1 = Seq2Seq_AI(1, filename1)
+  # AI_1 = AI(1)
+  # AI_2 = Seq2Seq_AI(2, filename2)
   AI_2 = AI(2)
-  boards, movess = simulate_2player_games(1000, AI_1, AI_2, draw=False)
+  boards, movess = simulate_2player_games(500, AI_1, AI_2, draw=False)
 
   wins, losses, draws = 0, 0, 0
   for board in boards:
