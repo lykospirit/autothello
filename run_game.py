@@ -6,6 +6,7 @@ from ai import *
 # moves: strings of length 2 (e.g 'e6', 'd4'). letters are columns, numbers are rows.
 # coords: tuples of length 2 in zero-indexed row-major order (e.g (5,4), (3,3))
 # indices: floats in [0,1]: (0,0) is 1/64, (7,7) is 64/64, no move is 0.
+# board: an 8x8 np.array containing 0's (empty), 1's (player 1 pieces) and 2's (player 2 pieces)
 
 def init_board():
   board = np.zeros((8,8))
@@ -165,7 +166,7 @@ def simulate_2player(AI_1, AI_2, draw=False):
 def simulate_2player_games(games, AI_1, AI_2, draw=False):
   boards, movess = [], []
   for i in range(games):
-    print("Running game {}...".format(i+1))
+    if i % 100 == 99: print("Running game {}...".format(i+1))
     board, moves = simulate_2player(AI_1, AI_2, draw)
     boards.append(board)
     movess.append(moves)
@@ -189,12 +190,17 @@ if __name__ == "__main__":
   #       outp.write('\n'.encode('UTF-8'))
   #   outp.close()
 
+  filename = 'deepQ_p1_4_1000'
+  AI_1 = DQN_AI(1, filename)
+  # AI_1 = VAE_AI(1, filename)
+  # AI_1 = AI(1)
   # filename1 = 'vae_1'
   filename1 = 'seq2seq6'
   filename2 = 'seq2seq4'
+
   # AI_1 = VAE_AI(1, filename1)
-  AI_1 = Seq2Seq_AI(1, filename1)
-  #AI_1 = AI(1)
+  # AI_1 = Seq2Seq_AI(1, filename1)
+  # AI_1 = AI(1)
   # AI_2 = Seq2Seq_AI(2, filename2)
   AI_2 = AI(2)
   boards, movess = simulate_2player_games(500, AI_1, AI_2, draw=False)
@@ -205,5 +211,5 @@ if __name__ == "__main__":
     if state[1] > state[2]: wins += 1
     elif state[1] < state[2]: losses += 1
     else: draws += 1
-  print("Results for model {}".format(filename1))
+  print("Results for model {}".format(filename))
   print("Player 1 - Wins: {}, Losses: {}, Draws: {}".format(wins, losses, draws))
