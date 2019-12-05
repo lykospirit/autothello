@@ -64,5 +64,28 @@ class VAE_AI(AI):
     # failsafe: return random valid coord
     return valid_coords[np.random.choice(len(valid_coords), 1)[0]]
 
+class DQN_AI(AI):
+  def __init__(self, player, filename):
+    super().__init__(player)
+    train_input = Input(shape=(64,))
+    hidden1 = Dense(256, activation='relu', name='hidden1')(train_input)
+    hidden2 = Dense(256, activation='relu', name='hidden2')(hidden1)
+    output  = Dense(64, activation='tanh', name='output')(hidden2)
+    self.model = Model(inputs=train_input, outputs=output)
+    self.model.load_weights('models/{}.h5'.format(filename), by_name=True)
+    print("DQN_AI initialized with weights {}".format(filename))
+
+  def move(self, board, coords):
+    epsilon = 0.05
+    r = np.random.uniform(0,1)
+    coords = get_valid_coords(board, self.player)
+    if r < epsilon:
+      return coords[np.random.randint(len(coords))]
+    else:
+      ids = list(map(lambda c: c[0]*8+c[1], coords))
+      q_values = self.model.predict(np.array([board.flatten()]))[0]
+      opt_id = ids[np.argmax(q_values[ids])]
+      return (opt_id//8, opt_id%8)
+
 if __name__ == "__main__":
   pass
