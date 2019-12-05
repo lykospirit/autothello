@@ -96,10 +96,8 @@ class DeepQ:
           if len(coords) == 0:  # neither player has moves: the game is over
             ended = True
             [blank, p1, p2] = evaluate_board(next_board)
-            # if p1 > p2: reward = 1.0
-            # elif p1 < p2: reward = -1.0
-            if p1 > p2: reward = -0.999999    # for deepQ_p1_{9-11}
-            elif p1 < p2: reward = 0.999999  #
+            if p1 > p2: reward = 0.999999
+            elif p1 < p2: reward = -0.999999
           break
 
       self.expBuf.append((board, action, reward, next_board))
@@ -143,10 +141,8 @@ class DeepQ:
             if len(coords) == 0:  # neither player has moves: the game is over
               done = True
               [blank, p1, p2] = evaluate_board(next_board)
-              # if p1 > p2: reward = 1.0
-              # elif p1 < p2: reward = -1.0
-              if p1 > p2: reward = -0.999999    # for deepQ_p1_{9-11}
-              elif p1 < p2: reward = 0.999999   #
+              if p1 > p2: reward = 0.999999
+              elif p1 < p2: reward = -0.999999
             break
         self.expBuf.append((self.board, action, reward, next_board))
         self.board = next_board.copy()
@@ -215,7 +211,7 @@ if __name__ == "__main__":
   # kwargs = {} # deepQ_p1_1
   # kwargs = {'clone_steps': 10000, 'lr': 2e-5, 'hidden_size': 128} # deepQ_p1_2
   # kwargs = {'clone_steps': 10000, 'lr': 1e-4, 'hidden_size': 256, 'disc_factor': 0.99} # deepQ_p1_3
-  # kwargs = {'clone_steps': 10000, 'lr': 0.00025, 'hidden_size': 256, 'disc_factor': 0.99} # deepQ_p1_4
+  kwargs = {'clone_steps': 10000, 'lr': 0.00025, 'hidden_size': 256, 'disc_factor': 0.99} # deepQ_p1_4
   # kwargs = {'clone_steps': 10000, 'lr': 0.00025, 'hidden_size': 512, 'disc_factor': 0.99, 'replay_init': 50000, 'replay_size': 1000000} # deepQ_p1_5
   # kwargs = {'clone_steps': 10000, 'lr': 0.0005, 'hidden_size': 512, 'disc_factor': 0.99, 'replay_init': 25000, 'replay_size': 250000, 'episodes': 10000} # deepQ_p1_6
   # kwargs = {'clone_steps': 10000, 'lr': 0.0001, 'hidden_size': 512, 'disc_factor': 0.99, 'replay_init': 25000, 'replay_size': 250000, 'episodes': 10000} # deepQ_p1_7
@@ -223,13 +219,13 @@ if __name__ == "__main__":
   # kwargs = {'clone_steps': 8000, 'lr': 0.0001, 'hidden_size': 512, 'disc_factor': 0.99, 'replay_init': 20000, 'replay_size': 200000, 'episodes': 10000} # deepQ_p1_9
   # kwargs = {'clone_steps': 10000, 'lr': 0.00025, 'hidden_size': 512, 'disc_factor': 0.99, 'replay_init': 50000, 'replay_size': 1000000} # deepQ_p1_10
   # kwargs = {'clone_steps': 10000, 'lr': 1e-4, 'hidden_size': 256, 'disc_factor': 0.99} # deepQ_p1_11
-  kwargs = {'clone_steps': 10000, 'lr': 5e-4, 'hidden_size': 256, 'disc_factor': 0.99} # deepQ_p1_12
+  # kwargs = {'clone_steps': 10000, 'lr': 5e-4, 'hidden_size': 256, 'disc_factor': 0.99} # deepQ_p1_12
   model = DeepQ(**kwargs)
   model.setup()
   # model.train("deepQ_p1_1")
   # model.train("deepQ_p1_2")
   # model.train("deepQ_p1_3")
-  # model.train("deepQ_p1_4")
+  model.train("deepQ_p1_4")
   # model.train("deepQ_p1_5")
   # model.train("deepQ_p1_6")
   # model.train("deepQ_p1_7")
@@ -238,6 +234,4 @@ if __name__ == "__main__":
   # model.train("deepQ_p1_10")
   # model.train("deepQ_p1_11")
   # model.train("deepQ_p1_12")
-  for eps in range(500,1001,500):
-    model.test("deepQ_p1_12", eps)
   print("done")
