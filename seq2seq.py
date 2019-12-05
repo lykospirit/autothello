@@ -157,9 +157,9 @@ if __name__ == "__main__":
 
     # # Setting this as the default tensorflow session.
     # K.tensorflow_backend.set_session(sess)
-    kwargs = {'lr': 1e-5, 'batch_size': 16, 'epochs': 100} 
+    kwargs = {'lr': 1e-5, 'batch_size': 16, 'epochs': 200} 
     model = Seq2Seq(**kwargs)
     model.create_network()
     model.load_data()
-    model.train("seq2seq5")
+    model.train("seq2seq6")
     #print(model.data["train_X"])

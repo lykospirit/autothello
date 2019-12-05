@@ -190,7 +190,7 @@ if __name__ == "__main__":
   #   outp.close()
 
   # filename1 = 'vae_1'
-  filename1 = 'seq2seq5'
+  filename1 = 'seq2seq6'
   filename2 = 'seq2seq4'
   # AI_1 = VAE_AI(1, filename1)
   AI_1 = Seq2Seq_AI(1, filename1)
